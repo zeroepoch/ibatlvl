@@ -1,5 +1,11 @@
 # object files
 *.o
 
+# python binaries
+*.py[cod]
+
+# vim swap files
+*.swp
+
 # target binary
 ibatlvl
