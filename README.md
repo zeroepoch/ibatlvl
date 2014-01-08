@@ -1,5 +1,5 @@
 iBatLvl
-======
+=======
 
 iOS Console Battery Level
 
@@ -63,3 +63,69 @@ $ scutil
 }
 > quit
 ```
+
+Debugger Script
+===============
+
+Mostly for my own reference, `lldb-trace.py` is a python script for instruction
+tracing that uses lldb. The lldb client installed on the Mac desktop connects
+to a remote debug server running on the iPhone. The steps below describe how to
+prepare the `debugserver` for an iPhone 5s, how to start the `debugserver` on
+the iPhone, and how to run the instruction tracing script on the Mac. See the
+[iPhone Development Wiki](http://iphonedevwiki.net/index.php/Debugserver) for
+additional information.
+
+```
+mac$ cd ~
+mac$ scp mobile@<iphone_ip>:/Developer/usr/bin/debugserver ~/debugserver
+mac$ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/lipo -thin arm64 ~/debugserver -output ~/debugserver.arm64
+mac$ scp ~/debugserver.arm64 mobile@<iphone_ip>:~/debugserver
+
+ios$ cd ~
+ios$ vim ent.xml  # see file ent.xml below
+ios$ ldid -Sent.xml ~/debugserver
+ios$ sudo cp ~/debugserver /usr/bin/debugserver
+```
+
+File: `ent.xml`
+
+```
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.springboard.debugapplications</key>
+    <true/>
+    <key>get-task-allow</key>
+    <true/>
+    <key>task_for_pid-allow</key>
+    <true/>
+    <key>run-unsigned-code</key>
+    <true/>
+</dict>
+</plist>
+```
+
+Start debugserver on the iPhone
+
+```
+ios$ debugserver 0.0.0.0:2159 <binary>
+```
+
+Run lldb python script on the Mac
+
+```
+mac$ ./lldb-trace.py -b <binary> -s main
+       1: dyld[0x2be01028]:  mov    r8, sp
+       2: dyld[0x2be0102c]:  sub    sp, sp, #16
+       3: dyld[0x2be01030]:  bic    sp, sp, #7
+       4: dyld[0x2be01034]:  ldr    r3, [pc, #112]
+       5: dyld[0x2be01038]:  sub    r0, pc, #8
+       6: dyld[0x2be0103c]:  ldr    r3, [r0, r3]
+       7: dyld[0x2be01040]:  sub    r3, r0, r3
+       8: dyld[0x2be01044]:  ldr    r0, [r8]
+       9: dyld[0x2be01048]:  ldr    r1, [r8, #4]
+      10: dyld[0x2be0104c]:  add    r2, r8, #8
+```
+
+The constants at the top of `lldb-trace.py`, such as the remote hostname, may
+need to be modified to fit your environment.
