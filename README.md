@@ -73,18 +73,17 @@ to a remote debug server running on the iPhone. The steps below describe how to
 prepare the `debugserver` for an iPhone 5s, how to start the `debugserver` on
 the iPhone, and how to run the instruction tracing script on the Mac. See the
 [iPhone Development Wiki](http://iphonedevwiki.net/index.php/Debugserver) for
-additional information.
+additional information. You will need to first enable developer mode on the
+iPhone using the XCode organizer.
 
 ```
-mac$ cd ~
 mac$ scp mobile@<iphone_ip>:/Developer/usr/bin/debugserver ~/debugserver
 mac$ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/lipo -thin arm64 ~/debugserver -output ~/debugserver.arm64
-mac$ scp ~/debugserver.arm64 mobile@<iphone_ip>:~/debugserver
+mac$ vim ent.xml  # see file ent.xml below
+mac$ codesign -s - --entitlements ent.xml -f ~/debugserver.arm64
+mac$ scp ~/debugserver.arm64 mobile@<iphone_ip>:~/debugserver.arm64
 
-ios$ cd ~
-ios$ vim ent.xml  # see file ent.xml below
-ios$ ldid -Sent.xml ~/debugserver
-ios$ sudo cp ~/debugserver /usr/bin/debugserver
+ios$ sudo cp ~/debugserver.arm64 /usr/bin/debugserver
 ```
 
 File: `ent.xml`
