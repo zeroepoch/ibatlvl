@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+#
+# To prepare the debugserver for the iOS device see:
+#   http://iphonedevwiki.net/index.php/Debugserver
+#
 
 import sys
 import argparse
@@ -65,6 +69,7 @@ if not lldb.thread.IsValid():
 # run until entry symbol
 if args.symbol:
     breakpoint = lldb.target.BreakpointCreateByName(args.symbol)
+    lldb.process.Continue()  # avoid dyld loop during first iter
     lldb.process.Continue()
 
 insnCount = 0
