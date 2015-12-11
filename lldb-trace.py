@@ -11,7 +11,6 @@ import argparse
 LLDB_PYPATH = "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/Resources/Python"
 
 # target parameters
-TARGET_TRIPLE = "armv7s-apple-ios"
 TARGET_PLATFORM = "remote-ios"
 REMOTE_URL = "connect://localhost:2159"
 
@@ -23,7 +22,12 @@ parser.add_argument('-s', '--symbol',
     help='run until symbol before dumping')
 parser.add_argument('-l', '--limit', type=int,
     help='limit number of instructions traced')
+parser.add_argument('-t', '--triple', default='arm64',
+    help='target architecture for the binary')
 args = parser.parse_args()
+
+# format target triple
+target_triple = args.triple + "-apple-ios"
 
 # check if symbol is usable
 if args.symbol and not args.binary:
@@ -46,7 +50,7 @@ listener = lldb.debugger.GetListener()
 
 # setup lldb platform/target
 lldb.target = lldb.debugger.CreateTarget(
-    args.binary, TARGET_TRIPLE, TARGET_PLATFORM, True, error)
+    args.binary, target_triple, TARGET_PLATFORM, True, error)
 if not lldb.target.IsValid() or not error.Success():
     sys.stderr.write(
         "Error: Failed to setup lldb platform/target!\n")
@@ -72,6 +76,9 @@ if args.symbol:
     lldb.process.Continue()  # avoid dyld loop during first iter
     lldb.process.Continue()
 
+# save start address
+start_addr = lldb.thread.GetSelectedFrame().addr
+
 insnCount = 0
 
 while True:
@@ -80,18 +87,22 @@ while True:
     lldb.frame = lldb.thread.GetSelectedFrame()
     insn = lldb.target.ReadInstructions(lldb.frame.addr, 1)[0]
 
-    # step next instruction
-    lldb.thread.StepInstruction(False)
-    if lldb.thread.stop_reason != lldb.eStopReasonPlanComplete:
-        break
-
     insnCount += 1
 
     # print instruction trace line
     print "%8d: %s" % (insnCount, insn)
 
+    # step next instruction
+    lldb.thread.StepInstruction(False)
+    if lldb.thread.stop_reason != lldb.eStopReasonPlanComplete:
+        break
+    if lldb.thread.GetSelectedFrame().addr == start_addr:  # repeat
+        break
+
     # check if instruction limit reached
     if args.limit and (insnCount == args.limit):
         break
+
+sys.stderr.write("Trace Complete!\n")
 
 # vim: ai et ts=4 sts=4 sw=4
